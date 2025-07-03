@@ -6,6 +6,7 @@ from flask import Flask, request, Response
 from icecream import ic
 import json
 import requests
+from urllib import response
 
 if not load_dotenv():
     print("WARNING: Failed to load .env file")
@@ -40,6 +41,9 @@ def create_log_dir():
 @app.route("/", defaults={"path": ""}, methods=["GET", "POST", "PUT", "DELETE"])
 @app.route("/<path:path>", methods=["GET", "POST", "PUT", "DELETE"])
 def proxy(path):
+
+    ic("proxy called with path:", path)
+
     log_dir = create_log_dir()
 
     # Capture request details
@@ -62,46 +66,69 @@ def proxy(path):
         with open(os.path.join(log_dir, "request_body.json"), "wb") as f:
             f.write(request_body)
 
-    # parse the request body as JSON if possible and modify a field
-    try:
-        request_json = json.loads(request_body)
-        # Modify the request_json as needed
-        # For example, if you want to change a field:
-        # request_json["field_name"] = "new_value"
+    ic("Parsing request body as JSON if possible")
 
-        # if there is a field called "max_tokens", remove it.
-        if "max_tokens" in request_json and path == "v1/chat/completions":
-            del request_json["max_tokens"]
+    # ic("request_body:", request_body)
+    # ic("type(request_body):", type(request_body))
+    # ic("len(request_body):", len(request_body))
 
-            # if there is no field called "options", add it
-            if "options" not in request_json:
-                request_json["options"] = {}
+    if len(request_body) > 0:
+        ic("Before calling json.loads request_body:", request_body)
 
-            # if there is a field called "options" and it is not a dict, print a warning
-            if not isinstance(request_json["options"], dict):
-                print("Warning: options is not a dict")
-            else:
-                request_json["options"]["num_predict"] = 4096
-                request_json["options"]["num_ctx"] = 70000
+        # parse the request body as JSON if possible and modify a field
+        try:
+            request_json = json.loads(request_body)
+            ic()
+            ic("request_json:", request_json)
 
+            # Modify the request_json as needed
+            # For example, if you want to change a field:
+            # request_json["field_name"] = "new_value"
 
-        ic(request_json)
+            # # if there is a field called "max_tokens", remove it.
+            # if "max_tokens" in request_json and path == "v1/chat/completions":
+            #     del request_json["max_tokens"]
 
+            #     # if there is no field called "options", add it
+            #     if "options" not in request_json:
+            #         request_json["options"] = {}
 
-        request_body = json.dumps(request_json).encode('utf-8')
-    except json.JSONDecodeError:
-        pass
-    except TypeError:
-        # Handle the case where request_body is None or not a valid JSON
-        pass
-    # Save the modified request body
-    with open(os.path.join(log_dir, "modified_request_body.json"), "wb") as f:
-        f.write(request_body)
+            #     # if there is a field called "options" and it is not a dict, print a warning
+            #     if not isinstance(request_json["options"], dict):
+            #         print("Warning: options is not a dict")
+            #     else:
+            #         request_json["options"]["num_predict"] = 4096
+            #         request_json["options"]["num_ctx"] = 70000
+
+            ic("Modified request_json:", request_json)
+
+            request_body = json.dumps(request_json).encode('utf-8')
+
+            ic("Modified request_body:", request_body)
+
+        # except json.JSONDecodeError:
+        #     ic("Failed to decode request body as JSON, keeping original request body")
+        #     pass
+        except TypeError:
+            # Handle the case where request_body is None or not a valid JSON
+            ic("Failed to process request body, keeping original request body")
+            pass
+
+        # Save the modified request body
+        with open(os.path.join(log_dir, "modified_request_body.json"), "wb") as f:
+            f.write(request_body)
 
     request_url = f"{TARGET_URL}/{path}"
-    request_headers = {key: value for key, value in request.headers.items() if key.lower() != "host"}
+    request_headers = {
+        key: value for key, value in request.headers.items() 
+        if key.lower() != "host"}
+    
+    # ic("Adjusting Content-Length header")
+    # request_headers["Content-Length"] = f"{len(request_body)}"
+
     if TARGET_API_KEY:
         request_headers["Authorization"] = f"Bearer {TARGET_API_KEY}"
+
     request_params = dict(request.args)
 
     ic("Calling requests.request",
@@ -120,6 +147,10 @@ def proxy(path):
         data=request_body,
         stream=True
     )
+    # ic("Response received with status code:", response.status_code)
+    # ic("Response headers:", response.headers)
+    # ic("Response content type:", response.headers.get('Content-Type'))
+    # ic("Response content:", response.content)
 
     # Stream and log the response body incrementally
     def generate_stream():
