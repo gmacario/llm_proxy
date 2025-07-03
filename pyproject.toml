@@ -1,0 +1,10 @@
+[project]
+name = "ollama-proxy"
+version = "0.1.0"
+description = "A Flask-based proxy for logging and modifying requests to an Ollama server."
+authors = ["michael-heinrich, gmacario <your-email@example.com>"]
+license = "MIT"
+
+[dependencies]
+flask = "*"
+requests = "*"
