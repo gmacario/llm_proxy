@@ -6,7 +6,6 @@ from flask import Flask, request, Response
 from icecream import ic
 import json
 import requests
-from urllib import response
 
 if not load_dotenv():
     print("WARNING: Failed to load .env file")
@@ -16,7 +15,7 @@ TARGET_URL = os.getenv("TARGET_URL", "http://192.168.2.149:11434")
 # TARGET_URL="https://openwebui.gmacario.it/ollama"    # DEBUG
 TARGET_API_KEY = os.getenv("TARGET_API_KEY")
 
-def obfuscate_key(key: str, num_visible_chars: int=4) -> str:
+def obfuscate_key(key: str | None, num_visible_chars: int=4) -> str | None:
     if not key or len(key) < 2 * num_visible_chars:
         return key
     return key[:num_visible_chars] + \
@@ -42,7 +41,7 @@ def create_log_dir():
 @app.route("/<path:path>", methods=["GET", "POST", "PUT", "DELETE"])
 def proxy(path):
 
-    ic("proxy called with path:", path)
+    # ic("proxy called with path:", path)
 
     log_dir = create_log_dir()
 
@@ -61,25 +60,26 @@ def proxy(path):
 
     # Save request body (if any)
     request_body = request.get_data()
-    ic(request_body)
+    # ic(request_body)
     if request_body:
         with open(os.path.join(log_dir, "request_body.json"), "wb") as f:
             f.write(request_body)
 
-    ic("Parsing request body as JSON if possible")
+    # ic("Parsing request body as JSON if possible")
 
     # ic("request_body:", request_body)
     # ic("type(request_body):", type(request_body))
     # ic("len(request_body):", len(request_body))
 
     if len(request_body) > 0:
-        ic("Before calling json.loads request_body:", request_body)
+        # ic("Before calling json.loads request_body:", request_body)
 
         # parse the request body as JSON if possible and modify a field
         try:
             request_json = json.loads(request_body)
-            ic()
-            ic("request_json:", request_json)
+
+            # ic()
+            # ic("request_json:", request_json)
 
             # Modify the request_json as needed
             # For example, if you want to change a field:
@@ -100,11 +100,17 @@ def proxy(path):
             #         request_json["options"]["num_predict"] = 4096
             #         request_json["options"]["num_ctx"] = 70000
 
-            ic("Modified request_json:", request_json)
+            # Workaround for openwebui bug TODO
+            # ic(path)
+            if "model" in request_json and path == "api/show":
+                request_json["name"] = request_json["model"]
+                del request_json["model"]
+
+            # ic("Modified request_json:", request_json)
 
             request_body = json.dumps(request_json).encode('utf-8')
 
-            ic("Modified request_body:", request_body)
+            # ic("Modified request_body:", request_body)
 
         # except json.JSONDecodeError:
         #     ic("Failed to decode request body as JSON, keeping original request body")
@@ -131,12 +137,12 @@ def proxy(path):
 
     request_params = dict(request.args)
 
-    ic("Calling requests.request",
-       request.method,
-       request_url,
-       request_headers,
-       request_params,
-       request_body)
+    # ic("Calling requests.request",
+    #    request.method,
+    #    request_url,
+    #    request_headers,
+    #    request_params,
+    #    request_body)
 
     # Proxy the request with streaming enabled
     response = requests.request(
@@ -176,6 +182,8 @@ def proxy(path):
         for key, value in response.headers.items()
         if key.lower() not in excluded_headers
     }
+    
+    # ic(response_headers)
 
     return Response(
         generate_stream(),
