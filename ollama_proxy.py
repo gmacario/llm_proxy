@@ -1,11 +1,22 @@
 import os
-import json
+
 import datetime
+from dotenv import load_dotenv
 from flask import Flask, request, Response
+from icecream import ic
+import json
 import requests
 
+if not load_dotenv():
+    raise ValueError("Failed to load .env file")
+
 # Configure Proxy Target
-TARGET_URL = "http://192.168.2.149:11434"  # Change to your target
+TARGET_URL = os.getenv("TARGET_URL", "http://192.168.2.149:11434")
+TARGET_URL="https://openwebui.gmacario.it/ollama"    # DEBUG
+TARGET_API_KEY = os.getenv("TARGET_API_KEY")
+
+ic(TARGET_URL)
+# ic(TARGET_API_KEY)
 
 app = Flask(__name__)
 
@@ -36,6 +47,7 @@ def proxy(path):
 
     # Save request body (if any)
     request_body = request.get_data()
+    ic(request_body)
     if request_body:
         with open(os.path.join(log_dir, "request_body.json"), "wb") as f:
             f.write(request_body)
@@ -63,6 +75,7 @@ def proxy(path):
                 request_json["options"]["num_ctx"] = 70000
 
 
+        ic(request_json)
 
 
         request_body = json.dumps(request_json).encode('utf-8')
@@ -75,14 +88,25 @@ def proxy(path):
     with open(os.path.join(log_dir, "modified_request_body.json"), "wb") as f:
         f.write(request_body)
 
+    request_url = f"{TARGET_URL}/{path}"
+    request_headers = {key: value for key, value in request.headers.items() if key.lower() != "host"}
+    if TARGET_API_KEY:
+        request_headers["Authorization"] = f"Bearer {TARGET_API_KEY}"
+    request_params = dict(request.args)
 
+    ic("Calling requests.request",
+       request.method,
+       request_url,
+       request_headers,
+       request_params,
+       request_body)
 
     # Proxy the request with streaming enabled
     response = requests.request(
         method=request.method,
-        url=f"{TARGET_URL}/{path}",
-        headers={key: value for key, value in request.headers.items() if key.lower() != "host"},
-        params=dict(request.args),
+        url=request_url,
+        headers=request_headers,
+        params=request_params,
         data=request_body,
         stream=True
     )
