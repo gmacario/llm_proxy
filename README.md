@@ -19,6 +19,24 @@ This project provides a simple Python proxy for interacting with Large Language 
 2. Run `ollama_proxy.py` to start the proxy server.
 3. Send requests to the proxy, which will forward them to the Ollama backend.
 
+### Running in Docker
+
+Build the container image
+
+```bash
+docker build -t ollama_proxy .
+```
+
+Run as a service
+
+```bash
+docker run -d --rm \
+    -e TARGET_URL=https://openwebui.example.com/ollama \
+    -e TARGET_API_KEY=MY_BEARER_KEY \
+    -p 11434:11434 \
+    ollama_proxy
+```
+
 ## License
 
 See [LICENSE](LICENSE) for details.
