@@ -29,7 +29,7 @@ cp sample.env .env
 vi .env
 
 # Run the proxy server
-uv run ollama_proxy .
+uv run ollama_proxy.py
 ```
 
 ### Running in Docker
