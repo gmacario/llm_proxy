@@ -8,15 +8,25 @@ import json
 import requests
 
 if not load_dotenv():
-    raise ValueError("Failed to load .env file")
+    print("WARNING: Failed to load .env file")
 
 # Configure Proxy Target
 TARGET_URL = os.getenv("TARGET_URL", "http://192.168.2.149:11434")
-TARGET_URL="https://openwebui.gmacario.it/ollama"    # DEBUG
+# TARGET_URL="https://openwebui.gmacario.it/ollama"    # DEBUG
 TARGET_API_KEY = os.getenv("TARGET_API_KEY")
 
+def obfuscate_key(key: str, num_visible_chars: int=4) -> str:
+    if not key or len(key) < 2 * num_visible_chars:
+        return key
+    return key[:num_visible_chars] + \
+        "*" * (len(key[num_visible_chars:-num_visible_chars])) + \
+        key[-num_visible_chars:]
+
+# print(f"DEBUG: TARGET_URL={TARGET_URL}")
+# print(f"DEBUG: TARGET_API_KEY={obfuscate_key(TARGET_API_KEY)}")
+
 ic(TARGET_URL)
-# ic(TARGET_API_KEY)
+ic(obfuscate_key(TARGET_API_KEY))
 
 app = Flask(__name__)
 
