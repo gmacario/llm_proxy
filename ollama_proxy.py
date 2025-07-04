@@ -106,7 +106,7 @@ def proxy(path):
                 request_json["name"] = request_json["model"]
                 del request_json["model"]
 
-            ic("Modified request_json:", request_json)
+            # ic("Modified request_json:", request_json)
 
             request_body = json.dumps(request_json).encode('utf-8')
 
