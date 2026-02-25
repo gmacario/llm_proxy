@@ -1,3 +1,7 @@
+"""
+Proxy LLM requests
+"""
+
 import os
 
 import datetime
@@ -15,7 +19,11 @@ TARGET_URL = os.getenv("TARGET_URL", "http://192.168.2.149:11434")
 # TARGET_URL="https://openwebui.gmacario.it/ollama"    # DEBUG
 TARGET_API_KEY = os.getenv("TARGET_API_KEY")
 
+
 def obfuscate_key(key: str | None, num_visible_chars: int=4) -> str | None:
+    """
+    Obfuscate key replacing most characters with asterisks
+    """
     if not key or len(key) < 2 * num_visible_chars:
         return key
     return key[:num_visible_chars] + \
@@ -41,7 +49,7 @@ def create_log_dir():
 @app.route("/<path:path>", methods=["GET", "POST", "PUT", "DELETE"])
 def proxy(path):
 
-    # ic("proxy called with path:", path)
+    ic("proxy called with path:", path)
 
     log_dir = create_log_dir()
 
@@ -118,7 +126,7 @@ def proxy(path):
         except TypeError:
             # Handle the case where request_body is None or not a valid JSON
             ic("Failed to process request body, keeping original request body")
-            pass
+            # pass
 
         # Save the modified request body
         with open(os.path.join(log_dir, "modified_request_body.json"), "wb") as f:
@@ -126,9 +134,9 @@ def proxy(path):
 
     request_url = f"{TARGET_URL}/{path}"
     request_headers = {
-        key: value for key, value in request.headers.items() 
+        key: value for key, value in request.headers.items()
         if key.lower() != "host"}
-    
+
     # ic("Adjusting Content-Length header")
     # request_headers["Content-Length"] = f"{len(request_body)}"
 
@@ -151,9 +159,10 @@ def proxy(path):
         headers=request_headers,
         params=request_params,
         data=request_body,
-        stream=True
+        stream=True,
+        timeout=None
     )
-    # ic("Response received with status code:", response.status_code)
+    ic("Response received with status code:", response.status_code)
     # ic("Response headers:", response.headers)
     # ic("Response content type:", response.headers.get('Content-Type'))
     # ic("Response content:", response.content)
@@ -182,7 +191,7 @@ def proxy(path):
         for key, value in response.headers.items()
         if key.lower() not in excluded_headers
     }
-    
+
     # ic(response_headers)
 
     return Response(
@@ -192,5 +201,8 @@ def proxy(path):
         content_type=response.headers.get('Content-Type')
     )
 
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=11434)
+
+# EOF
